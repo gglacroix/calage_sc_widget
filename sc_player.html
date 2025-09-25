@@ -1,145 +1,97 @@
 <!DOCTYPE html>
 <html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Lecteur SoundCloud avec vidéo</title>
-    <style>
-      body, html {
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        overflow: hidden;
-        font-family: sans-serif;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-      .video-bg {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        z-index: -1;
-        filter: blur(5px);
-      }
-      .controls {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        padding: 3px;
-        border-radius: 4px;
-        z-index: 2;
-        color: #fff;
-        font-size: 0.7em;
-      }
-      .controls input {
-        width: 130px;
-        padding: 2px;
-        margin-bottom: 2px;
-        border-radius: 2px;
-        border: none;
-        font-size: 0.7em;
-      }
-      .controls button {
-        padding: 2px 5px;
-        border-radius: 2px;
-        border: none;
-        background: #b7b6cd;
-        color: #0f1115;
-        cursor: pointer;
-        font-weight: bold;
-        margin-right: 2px;
-        font-size: 0.7em;
-      }
-      .embed {
-        position: relative;
-        width: 360px;
-        height: 360px;
-        margin: auto;
-        z-index: 1;
-        background: transparent;
-        overflow: hidden;
-      }
-      .embed iframe {
-        width: 100%;
-        height: 100%;
-        border: 0;
-        background: transparent;
-      }
-    </style>
-  </head>
-  <body>
-
-    <div class="controls">
-      <input id="iframeHtml" type="text" value="&lt;iframe width=\"100%\" height=\"300\" scrolling=\"no\" frameborder=\"no\" allow=\"autoplay\" src=\"https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/soundcloud%253Atracks%253A2113654521&color=%23b7b6cd&auto_play=false&hide_related=false&show_comments=true&show_user=false&show_reposts=false&show_teaser=true&sharing=false&buying=false&download=false&visual=true\"&gt;&lt;/iframe&gt;" />
-      <br>
-      <button onclick="updateIframeHtml()">Changer l'iframe</button>
-      <br>
-      <input id="seekSeconds" type="number" placeholder="Seek to (secondes)" value="30" />
-      <button onclick="updateSeek()">Appliquer seekTo</button>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SoundCloud – Autoplay avec ID et timecode</title>
+  <style>
+    html,body {
+      margin:0; padding:0; height:100%;
+      display:flex; align-items:center; justify-content:center;
+      background:#111; color:#ddd; font-family:system-ui, sans-serif;
+    }
+    .embed { position:relative; width:360px; height:360px }
+    .embed iframe { width:100%; height:100%; border:0; background:transparent }
+    #notice { margin-top:12px; text-align:center; opacity:.85 }
+    #startBtn { display:none; margin-top:8px; padding:10px 16px; border:0; border-radius:8px; cursor:pointer }
+    .wrap { display:flex; flex-direction:column; align-items:center }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="embed">
+      <iframe id="soundcloudPlayer" scrolling="no" frameborder="0" allow="autoplay"></iframe>
     </div>
 
-    <video id="bgVideo" class="video-bg" autoplay muted loop playsinline>
-      <source src="/Users/gary/Desktop/TEST/TEST01.mp4" type="video/mp4" />
-      Votre navigateur ne supporte pas la vidéo en arrière-plan.
-    </video>
-
-    <div class="embed" id="iframeContainer">
-      <iframe id="soundcloudPlayer" scrolling="no" frameborder="no" allow="autoplay"
-        src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/soundcloud%253Atracks%253A2113654521&color=%23b7b6cd&auto_play=false&hide_related=false&show_comments=true&show_user=false&show_reposts=false&show_teaser=true&visual=true&sharing=false&buying=false&download=false">
-      </iframe>
-    </div>
+    <div id="notice">Chargement du widget…</div>
+    <button id="startBtn">🔊 Démarrer au timecode</button>
+  </div>
 
   <script src="https://w.soundcloud.com/player/api.js"></script>
   <script>
-    // --- Helpers ---
-    const qs = new URLSearchParams(location.search);
-    const trackUrl   = qs.get('track') || 'https%3A//api.soundcloud.com/tracks/1995257751';
-    const startMs    = parseInt(qs.get('start') || '0', 10);     // en millisecondes
-    const volume     = Math.max(0, Math.min(100, parseInt(qs.get('volume') || '100', 10)));
-    const autoPlay   = (qs.get('autoplay') || '1') !== '0';      // 1 par défaut
-    const showArt    = (qs.get('visual') || '0') === '1';        // visual player (grand visuel)
+    // ---- Helpers ----
+    function getParam(name, fallback=null) {
+      const p = new URLSearchParams(location.search);
+      return p.get(name) || fallback;
+    }
+    function tcToMs(tc) {
+      if (!tc) return 0;
+      const parts = String(tc).trim().split(':').map(Number);
+      if (parts.length === 3) { const [h,m,s]=parts; return ((h*3600)+(m*60)+s)*1000; }
+      if (parts.length === 2) { const [m,s]=parts;   return ((m*60)+s)*1000; }
+      return (Number(tc) || 0) * 1000;
+    }
 
-    const info = (msg) => document.getElementById('info').textContent = msg;
+    // ---- Récupère les paramètres ----
+    const TRACK_ID = getParam('id', '1885856037'); // défaut si pas fourni
+    const TIMECODE = getParam('t', '00:00:00');
+    const seekMs   = tcToMs(TIMECODE);
 
-    // --- Construire l'URL du widget ---
-    const base = 'https://w.soundcloud.com/player/?';
-    const params = new URLSearchParams({
-      url: trackUrl,
-      auto_play: autoPlay ? 'true' : 'false',
-      hide_related: 'true',
-      show_comments: 'true',
-      show_user: 'false',
-      show_reposts: 'false',
-      buying: 'false',
-      sharing: 'false',
-      download: 'false',
-      visual: showArt ? 'true' : 'false'
-    });
-    const iframe = document.getElementById('sc-player');
-    iframe.src = base + params.toString();
+    // ---- Prépare l’iframe avec l’ID ----
+    const iframe = document.getElementById('soundcloudPlayer');
+    const trackUrl = "https://api.soundcloud.com/tracks/" + TRACK_ID;
+    iframe.src = "https://w.soundcloud.com/player/?" +
+                 "url=" + encodeURIComponent(trackUrl) +
+                 "&color=%23b7b6cd&auto_play=false&hide_related=false" +
+                 "&show_comments=true&show_user=false&show_reposts=false" +
+                 "&show_teaser=true&visual=true&sharing=false&buying=false&download=false";
 
-    // --- Contrôle via l'API du widget ---
-    let didSeek = false;
-    const widget = SC.Widget(iframe);
+    const widget   = SC.Widget(iframe);
+    const notice   = document.getElementById('notice');
+    const startBtn = document.getElementById('startBtn');
 
-    widget.bind(SC.Widget.Events.READY, function () {
-      info('Widget prêt…');
-      widget.setVolume(volume);
-
-      // Certains widgets ne chargent la durée qu’après PLAY : on force PLAY,
-      // puis on SEEK une seule fois à la première progression.
-      widget.bind(SC.Widget.Events.PLAY_PROGRESS, function (needle) {
-        if (!didSeek) {
-          didSeek = true;
-          if (startMs > 0) widget.seekTo(startMs);
-        }
-      });
-
-      // Lance la lecture
+    function startAtTimecode() {
+      if (widget.setVolume) widget.setVolume(0); // maximise chance d’autoplay
       widget.play();
+      setTimeout(() => {
+        widget.seekTo(seekMs);
+        setTimeout(() => widget.seekTo(seekMs), 200); // verrouille la position
+        setTimeout(() => { if (widget.setVolume) widget.setVolume(100); }, 400);
+      }, 150);
+    }
+
+    function showFallback() {
+      startBtn.style.display = 'inline-block';
+      notice.textContent = "Autoplay bloqué. Clique pour démarrer au timecode " + TIMECODE + ".";
+    }
+
+    startBtn.addEventListener('click', () => {
+      startAtTimecode();
+      startBtn.style.display = 'none';
+      notice.textContent = "Lecture démarrée à " + TIMECODE + ".";
     });
 
+    widget.bind(SC.Widget.Events.READY, () => {
+      notice.textContent = "Widget prêt, tentative d’autoplay à " + TIMECODE + "…";
+      startAtTimecode();
+
+      setTimeout(() => {
+        widget.isPaused((paused) => {
+          if (paused) showFallback();
+          else notice.textContent = "Lecture auto OK (→ " + TIMECODE + ").";
+        });
+      }, 1200);
+    });
+  </script>
+</body>
+</html>

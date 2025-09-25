@@ -21,11 +21,7 @@ TRACK_ID=$(bin/yt-dlp --print "%(id)s" "$TRACK_URL")
 
 # Informations serveurs web
 HTML_FILE="sc_player.html"
-WEBSERVER_URL="http://127.0.0.1:8000/$HTML_FILE"
-
-# Mise à jour de la track ID dans le fichier HTML
-
-sed -i -E "s|(%253A)[0-9]+(&color)|\1${TRACK_ID}\2|g" "$HTML_FILE"
+WEBSERVER_URL="http://127.0.0.1:8000/$HTML_FILE?id=${TRACK_ID}&t=${AUDIO_TC_IN}"
 
 # Affichage navigateur
 DISPLAY_WIDTH="1080"
@@ -73,7 +69,7 @@ ffmpeg -y \
   -video_size "$DISPLAY_WIDTH"x"$DISPLAY_HEIGHT" -framerate 30 \
   -f x11grab -draw_mouse 0 -i :99.0+0,0 \
   -t "$VIDEO_DURATION" \
-  -vf "crop=350:344:365:866" \
+  -vf "crop=350:344:365:850" \
   -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p \
   -c:a aac -b:a 192k "widget.mp4"
 
@@ -103,5 +99,5 @@ ffmpeg -i background.mp4 -i widget.mp4 -i audio_extract.mp3 \
 echo "✅ Terminé : $FILE_OUT"
 
 rm -rf ~/.cache/chromium
-rm audio.mp3
+rm audio.mp3 audio_extract.mp3  background.mp4
 echo "✅ Supprime le cache pour les prochains exports"
