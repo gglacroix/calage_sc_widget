@@ -4,12 +4,13 @@ set -Eeuo pipefail
 # ----------- Paramètres -----------
 TRACK_URL="${1:-https://soundcloud.com/calage/exalk-hurt-feelings}"
 VIDEO_DURATION="${2:-30}"
-AUDIO_TC_IN="${3:-00:03:30}"
+AUDIO_TC_IN="${3:-00:00:15}"
 AUDIO_DURATION="${4:-30}"
 FILE_OUT="${5:-out.mp4}"
 BACKGROUND_URL="${6:-https://www.youtube.com/watch?v=ywa7QQTjSkE}"
 BACKGROUND_DURATION=30
-BACKGROUND_TC_IN="${7:-00:38:35}"
+BACKGROUND_TC_IN="${7:-00:15:15}"
+# TRACK_ID="${8:-2123684790}"
 
 start_epoch=$(date -u -d "1970-01-01 ${BACKGROUND_TC_IN} UTC" +%s) || {
   echo "timecode invalide: ${BACKGROUND_TC_IN}" >&2; exit 1;
