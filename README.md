@@ -1,6 +1,6 @@
-# calage_sc_widget
+# sc_widget
 
-# 🎶 Calage SC Widget
+# 🎶 SC Widget
 
 Ce projet permet de générer une vidéo **Picture-in-Picture** avec un widget SoundCloud incrusté sur un fond vidéo (YouTube) et synchronisé avec un timecode précis.  
 L’ensemble s’appuie sur `chromium` en mode headless et `ffmpeg`.
@@ -12,8 +12,8 @@ L’ensemble s’appuie sur `chromium` en mode headless et `ffmpeg`.
 Cloner le dépôt :
 
 ```bash
-git clone git@github.com:gglacroix/calage_sc_widget.git
-cd calage_sc_widget.git
+git clone git@github.com:gglacroix/sc_widget.git
+cd sc_widget.git
 
 Installer les dépendances nécessaires :
 
