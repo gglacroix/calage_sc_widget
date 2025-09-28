@@ -17,13 +17,11 @@ cd sc_widget.git
 
 Installer les dépendances nécessaires :
 
-```bash
 sudo apt update
 sudo apt install -y python3 chromium ffmpeg xvfb
 
 Depuis le répertoire du dépôt, lancer un enregistrement avec :
 
-```bash
 ./record_headless.sh \
   --track-url "https://soundcloud.com/calage/exalk-hurt-feelings" \
   --audio-tc-in 00:02:50 \
