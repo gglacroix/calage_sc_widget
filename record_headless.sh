@@ -1,16 +1,67 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# ----------- Paramètres -----------
-TRACK_URL="${1:-https://soundcloud.com/calage/exalk-hurt-feelings}"
-WIDGET_DURATION="${2:-30}"
-AUDIO_TC_IN="${3:-00:00:15}"
-AUDIO_DURATION="$WIDGET_DURATION"
-BACKGROUND_URL="${4:-https://www.youtube.com/watch?v=ywa7QQTjSkE}"
-BACKGROUND_DURATION="$WIDGET_DURATION"
-BACKGROUND_TC_IN="${5:-00:15:15}"
-FILE_OUT="${6:-out.mp4}"
+# ----------- Valeurs par défaut -----------
+TRACK_URL="https://soundcloud.com/calage/exalk-hurt-feelings"
+WIDGET_DURATION="30"
+AUDIO_TC_IN="00:00:15"
+BACKGROUND_URL="https://www.youtube.com/watch?v=ywa7QQTjSkE"
+BACKGROUND_TC_IN="00:15:15"
+FILE_OUT="out.mp4"
 
+show_help() {
+  cat <<EOF
+Usage: $0 [options]
+
+Options:
+  -t, --track-url URL        URL de la track SoundCloud (par défaut: $TRACK_URL)
+  -d, --duration SEC         Durée de la capture widget en secondes (par défaut: $WIDGET_DURATION)
+  -a, --audio-tc-in TC       Timecode début audio track soundcloud (HH:MM:SS) (par défaut: $AUDIO_TC_IN)
+  -b, --background-url URL   URL de la vidéo YouTube pour le background (par défaut: $BACKGROUND_URL)
+  -s, --background-tc-in TC  Timecode début du background (HH:MM:SS) (par défaut: $BACKGROUND_TC_IN)
+  -o, --output FILE          Nom du fichier de sortie (par défaut: $FILE_OUT)
+  -h, --help                 Affiche cette aide
+
+Exemple :
+  $0 --track-url "https://soundcloud.com/user/track" \\
+     --duration 30 --audio-tc-in 00:01:23 \\
+     --background-url "https://youtube.com/watch?v=xxxx" \\
+     --background-tc-in 00:40:10 --output out.mp4
+EOF
+}
+
+# ----------- Parsing arguments -----------
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -t|--track-url)        TRACK_URL="$2"; shift 2 ;;
+    -d|--duration)         WIDGET_DURATION="$2"; shift 2 ;;
+    -a|--audio-tc-in)      AUDIO_TC_IN="$2"; shift 2 ;;
+    -b|--background-url)   BACKGROUND_URL="$2"; shift 2 ;;
+    -s|--background-tc-in) BACKGROUND_TC_IN="$2"; shift 2 ;;
+    -o|--output)           FILE_OUT="$2"; shift 2 ;;
+    -h|--help)             show_help; exit 0 ;;
+    --) shift; break ;;
+    -*)
+      echo "❌ Option inconnue: $1" >&2
+      show_help
+      exit 1
+      ;;
+    *) break ;;
+  esac
+done
+
+# ----------- Vérification -----------
+echo "🎵 Track URL        : $TRACK_URL"
+echo "⏱️  Widget durée    : $WIDGET_DURATION s"
+echo "🎧 Audio start      : $AUDIO_TC_IN"
+echo "📺 Background URL   : $BACKGROUND_URL"
+echo "⏱️  Background start: $BACKGROUND_TC_IN"
+echo "💾 Fichier sortie   : $FILE_OUT"
+
+AUDIO_DURATION="$WIDGET_DURATION"
+BACKGROUND_DURATION="$WIDGET_DURATION"
+
+# Convertir TC_OUT à partir de TC_IN + $BACKGROUND_DURATION
 start_epoch=$(date -u -d "1970-01-01 ${BACKGROUND_TC_IN} UTC" +%s) || {
   echo "timecode invalide: ${BACKGROUND_TC_IN}" >&2; exit 1;
 }
@@ -97,6 +148,7 @@ bin/yt-dlp -x --audio-format mp3 "$TRACK_URL" -o "audio.mp3"
 ffmpeg -ss "$AUDIO_TC_IN" -t "$AUDIO_DURATION" -i "audio.mp3" -acodec copy "audio_extract.mp3"
 echo "✅ Téléchargé terminé"
 # ----------- Téléchargement extrait vidéo background -----------
+BACKGROUND_URL="${BACKGROUND_URL%%&*}"
 echo "Téléchargement de l'extrait de la vidéo youtube"
 bin/yt-dlp -f "bv*[ext=mp4]/bv*" \
   --download-sections "*$BACKGROUND_TC_IN-$BACKGROUND_TC_OUT" \
